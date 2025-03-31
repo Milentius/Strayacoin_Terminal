@@ -73,7 +73,7 @@ class StrayacoinTerminal:
     def __init__(self, root):
         self.root = root
         self.root.title("Strayacoin Terminal")
-        self.themes = {}
+        self.themes: dict[str, dict[str, str]] = {}
         self.current_theme = None
         self.load_themes()
         self.mining_repeating = False
