@@ -1,0 +1,13 @@
+{
+  "name": "Dark",
+  "colors": {
+      "background": "#1E1E1E",
+      "foreground": "#FFFFFF",
+      "prompt": "#00FF00",
+      "output": "#CCCCCC",
+      "error": "#FF4444",
+      "warning": "#FFAA00",
+      "success": "#00FF00",
+      "statusbar": "#2D2D2D"
+  }
+}

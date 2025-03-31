@@ -1,0 +1,13 @@
+{
+  "name": "Light",
+  "colors": {
+      "background": "#FFFFFF",
+      "foreground": "#000000",
+      "prompt": "#007700",
+      "output": "#333333",
+      "error": "#CC0000",
+      "warning": "#AA5500",
+      "success": "#007700",
+      "statusbar": "#EEEEEE"
+  }
+}
