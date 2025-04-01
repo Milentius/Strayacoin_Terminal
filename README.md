@@ -2,7 +2,7 @@
 
 # Strayacoin Terminal
 
-![Strayacoin Terminal Screenshot](https://i.imgur.com/FA4IzIU.png) *(Example screenshot placeholder)*
+![Strayacoin Terminal Screenshot](https://i.imgur.com/FA4IzIU.png)
 
 A customizable terminal interface for Strayacoin mining and wallet management with theming support.
 
