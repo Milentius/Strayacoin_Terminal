@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, scrolledtext, filedialog
+from tkinter import ttk, scrolledtext
 import os
 import json
 import subprocess
@@ -7,6 +7,7 @@ import sys
 from datetime import datetime
 import platform
 import threading
+import math
 
 class ThemedStyle(ttk.Style):
     def __init__(self, root, theme_data):
@@ -78,6 +79,8 @@ class StrayacoinTerminal:
         self.load_themes()
         self.mining_repeating = False
         self.mining_stop_event = threading.Event()
+        self.output: scrolledtext.ScrolledText
+        self.terminal_frame: ttk.Frame
         
         # Configure window
         self.root.geometry("1000x700")
@@ -311,7 +314,7 @@ class StrayacoinTerminal:
         """Print welcome message"""
         welcome_msg = f"""
 Strayacoin Terminal
-Python {sys.version.split()[0]} on {platform.system()}
+Python {sys.version.split()[0]} on {platform.system()} {platform.release()}
 Type "help" for available commands.
 """
         self.print_output(welcome_msg, "output")
@@ -408,7 +411,7 @@ Type "help" for available commands.
             self.mining_thread.start()
             
             if self.mining_repeating:
-                self.print_output(f"Started repeating mining of {blocks} blocks (Press Esc to stop)\n", "success")
+                self.print_output(f"Starting repeated mining of {blocks} blocks (Press Esc to stop)\n", "success")
             else:
                 self.print_output(f"Started mining {blocks} blocks\n", "success")
                 
@@ -416,35 +419,163 @@ Type "help" for available commands.
             self.print_output("Usage: mine [-r] <number_of_blocks>\n", "error")
 
     def mine_blocks(self, blocks):
-        """Mine Strayacoin blocks with optional repeating"""
+        """Mine Strayacoin blocks with optimized performance metrics, clean output."""
+    
+        previous_rms = None
+        previous_emc_ratio = None
+    
+        def format_rms(rms):
+            return f"{rms:.4f}"
+    
+        def format_emc(emc, rms):
+            if rms > 0:
+                raw_ratio = emc / rms
+                compressed = math.sqrt(raw_ratio)
+    
+                if compressed < 0.01:
+                    display = f"{compressed:.4f}"
+                elif compressed < 1:
+                    display = f"{compressed:.3f}"
+                elif compressed < 100:
+                    display = f"{compressed:.2f}"
+                else:
+                    display = f"{compressed:.1f}"
+    
+                return compressed, display
+            return 0, "0.0000"
+    
         self.mining_active = True
         try:
             while not self.mining_stop_event.is_set():
                 for block in range(1, blocks + 1):
                     if self.mining_stop_event.is_set():
                         break
-                        
+    
+                    # Mine block
                     result = subprocess.run(
                         [self.cli_path, "generate", str(block)],
                         capture_output=True,
                         text=True,
                         check=True
                     )
-                    self.print_output(f"Mined block {block}\n", "output")
-                    self.print_output(result.stdout + "\n", "output")
-                
+    
+                    # Get network stats once and reuse
+                    stats = self._get_network_stats()
+    
+                    rms = stats["rms"]
+                    emc = stats["emc"]
+                    emc_ratio, emc_display = format_emc(emc, rms)
+    
+                    rms_str = format_rms(rms)
+                    emc_str = emc_display
+    
+                    # Save for next round
+                    #previous_rms = rms
+                    #previous_emc_ratio = emc_ratio
+    
+                    output = (
+                        f"Mined Block {block}/{blocks}\n"
+                        f"├─ RMS: {rms_str}\n"
+                        f"├─ EMC: {emc_str}\n"
+                        f"├─ Peers: {stats['peers']}\n"
+                        f"├─ Difficulty: {stats['difficulty']:.6f}\n"
+                        f"├─ Net Hashrate: {stats['hashrate']/1000:,.2f} KH/s\n"
+                        f"└──────────────────────────────\n"
+                    )
+                    self.print_output(output, "output")
+    
+                    if result.stdout.strip():
+                        self.print_output(result.stdout + "\n", "output")
+    
                 if not self.mining_repeating:
                     break
-                    
+    
         except subprocess.CalledProcessError as e:
             self.print_output(f"Mining error: {e.stderr}\n", "error")
-        except FileNotFoundError:
-            self.print_output("Strayacoin CLI not found\n", "error")
         finally:
             self.mining_active = False
-            self.mining_repeating = False
             if self.mining_stop_event.is_set():
                 self.print_output("Mining stopped by user\n", "warning")
+
+    def _get_network_stats(self):
+        """Get all network statistics in one optimized call"""
+        stats = {
+            'difficulty': float('nan'),
+            'peers': float('nan'),
+            'hashrate': float('nan'),
+            'rms': float('nan'),
+            'emc': float('nan')
+        }
+
+        try:
+            # Get difficulty and peers first since we need them for hashrate fallback
+            stats['difficulty'] = self._get_network_difficulty()
+            stats['peers'] = self._get_peer_count()
+
+            # Get hashrate with optimized fallback
+            stats['hashrate'] = self._get_network_hashrate(stats['difficulty'])
+
+            # Calculate metrics
+            if not math.isnan(stats['difficulty']) and not math.isnan(stats['peers']):
+                if stats['peers'] > 0 and stats['difficulty'] > 0:
+                    stats['rms'] = 1 / (stats['difficulty'] * stats['peers'])
+                    if not math.isnan(stats['hashrate']):
+                        stats['emc'] = stats['hashrate'] / (stats['difficulty'] * stats['peers'])
+
+        except Exception as e:
+            self.print_output(f"Network stats error: {str(e)}\n", "error")
+
+        return stats
+
+    def _get_network_difficulty(self):
+            """Get current network difficulty"""
+            try:
+                result = subprocess.run(
+                    [self.cli_path, "getdifficulty"],
+                    capture_output=True,
+                    text=True,
+                    check=True
+                )
+                return float(result.stdout.strip())
+            except:
+                return float('nan')
+
+    def _get_network_hashrate(self, current_difficulty=None):
+        """Optimized hashrate getter with difficulty fallback"""
+        try:
+            result = subprocess.run(
+                [self.cli_path, "getnetworkhashps"],
+                capture_output=True,
+                text=True,
+                encoding='utf-8',
+                check=True
+            )
+            hashrate = float(result.stdout.strip())
+
+            if hashrate <= 0 and current_difficulty is not None:
+                # Use difficulty-based estimation if standard hashrate is 0
+                inversion_factor = 2.5  
+                return current_difficulty * (2**32) / (60 * inversion_factor)
+            return hashrate
+        except:
+            if current_difficulty is not None:
+                return current_difficulty * (2**32) / 60
+            return float('nan')
+
+    def _get_peer_count(self):
+        """Get number of network peers"""
+        try:
+            result = subprocess.run(
+                [self.cli_path, "getpeerinfo"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            peers = json.loads(result.stdout)
+            return len(peers)
+        except:
+            return float('nan')
+
 
     def stop_mining(self, event=None):
         """Stop any active mining operation"""
@@ -530,20 +661,21 @@ Type "help" for available commands.
         """Show enhanced help information"""
         help_text = """
 Strayacoin Terminal Commands:
-  mine <blocks>    - Mine specified number of blocks
-  theme [name]     - Change color theme
-  wallet [command] - Interact with Strayacoin wallet
-  help             - Show this help
-  clear            - Clear the terminal
-  exit             - Exit the application
+  mine <blocks>       - Mine specified number of blocks once then stop
+  mine -r <blocks>    - Mine specified number of blocks repeatidly until stopped with esc
+  theme [name]        - Change color theme
+  wallet [command]    - Interact with Strayacoin wallet
+  help                - Show this help
+  clear               - Clear the terminal
+  exit                - Exit the application
 
 System Commands:
-  ls/dir           - List directory contents
-  cd <directory>   - Change directory
-  pwd              - Print working directory
-  date             - Show current date
-  time             - Show current time
-  <any command>    - Execute system command
+  ls/dir              - List directory contents
+  cd <directory>      - Change directory
+  pwd                 - Print working directory
+  date                - Show current date
+  time                - Show current time
+  <any command>       - Execute system command
 """
         self.print_output(help_text, "output")
 
