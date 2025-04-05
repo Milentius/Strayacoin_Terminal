@@ -25,7 +25,7 @@ A customizable terminal interface for Strayacoin mining and wallet management wi
 1. **Prerequisites**:
    - Python 3.8+
    - Strayacoin CLI (`Strayacoin-cli.exe` in same directory)
-   - Requires "requests", to install open cmd.exe or a terminal and type pip install requests
+   - Requires "requests", to install open cmd.exe or a terminal and type ```pip install requests```
 2. **Installing**:
    - Unzip/Unpack the miner (Strayacoin_Terminal.py)
 
