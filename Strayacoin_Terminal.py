@@ -8,6 +8,7 @@ from datetime import datetime
 import platform
 import threading
 import math
+import requests
 
 class ThemedStyle(ttk.Style):
     def __init__(self, root, theme_data):
@@ -83,7 +84,7 @@ class StrayacoinTerminal:
         self.terminal_frame: ttk.Frame
         
         # Configure window
-        self.root.geometry("1000x700")
+        self.root.geometry("960x525")
         self.root.minsize(800, 500)
         
         # Strayacoin configuration
@@ -202,12 +203,18 @@ class StrayacoinTerminal:
                            fg=colors["foreground"],
                            activebackground=colors["statusbar"],
                            activeforeground=colors["foreground"])
+        
+
+        # themes added dynamically based on what is in the themes folder
         for theme_name in sorted(self.themes.keys()):
             view_menu.add_command(
                 label=theme_name,
                 command=lambda name=theme_name: self.load_theme(name)
             )
         menubar.add_cascade(label="View", menu=view_menu)
+
+        
+
         
         # Help menu
         help_menu = tk.Menu(menubar, 
@@ -418,11 +425,14 @@ Type "help" for available commands.
         except (ValueError, IndexError):
             self.print_output("Usage: mine [-r] <number_of_blocks>\n", "error")
 
+    def toggle_output_mode(self):
+        self.output_mode_multiline = not self.output_mode_multiline
+
     def mine_blocks(self, blocks):
         """Mine Strayacoin blocks with optimized performance metrics, clean output."""
     
-        previous_rms = None
-        previous_emc_ratio = None
+        #previous_rms = None
+        #previous_emc_ratio = None
     
         def format_rms(rms):
             return f"{rms:.4f}"
@@ -469,20 +479,41 @@ Type "help" for available commands.
                     rms_str = format_rms(rms)
                     emc_str = emc_display
     
+                    minedBlocks = 1
+                    
                     # Save for next round
                     #previous_rms = rms
                     #previous_emc_ratio = emc_ratio
-    
+                    
+                    moneySupply = self._get_Money_Supply()
+                    priceOnTradeOgre = self._get_Tradeogre_Ticker(field="price")
+                    bidOnTradeOgre = self._get_Tradeogre_Ticker(field="bid")
+                    askOnTradeOgre = self._get_Tradeogre_Ticker(field="ask")
+                    
                     output = (
-                        f"Mined Block {block}/{blocks}\n"
+                        f"Mined Block {minedBlocks}\n"
                         f"├─ RMS: {rms_str}\n"
                         f"├─ EMC: {emc_str}\n"
                         f"├─ Peers: {stats['peers']}\n"
                         f"├─ Difficulty: {stats['difficulty']:.6f}\n"
                         f"├─ Net Hashrate: {stats['hashrate']/1000:,.2f} KH/s\n"
-                        f"└──────────────────────────────\n"
+                        f"├────────────────────────────────────────\n"
+                        f"├─ Network Money Supply: {moneySupply}\n"
+                        f"├────────────────────────────────────────\n"
+                        f"├─ BTC Price (TradeOgre): {priceOnTradeOgre}\n"
+                        f"├─ BTC Sell (TradeOgre): {bidOnTradeOgre}\n"
+                        f"├─ BTC Buy (TradeOgre): {askOnTradeOgre}\n"
+                         "└────────────────────────────────────────\n"
                     )
                     self.print_output(output, "output")
+                    
+                    #add one to the number of mined blocks
+                    minedBlocks + 1
+                    #output = (
+                    #    f"Mined Block {minedBlocks} | Difficulty: {stats['difficulty']:.6f} | RMS: {rms_str} | EMC: {emc_str} | Peers: {stats['peers']} | Net Hashrate: {stats['hashrate']/1000:,.2f} KH/s\n"
+                    #    f"Mined Block {block}/{blocks} | Difficulty: {stats['difficulty']:.6f} | RMS: {rms_str} | EMC: {emc_str} | Peers: {stats['peers']} | Net Hashrate: {stats['hashrate']/1000:,.2f} KH/s\n"
+                    #)
+                    #self.print_output(output, "output")
     
                     if result.stdout.strip():
                         self.print_output(result.stdout + "\n", "output")
@@ -563,6 +594,48 @@ Type "help" for available commands.
             return float('nan')
 
     def _get_peer_count(self):
+        """Get number of network peers from explorer API"""
+        try:
+            response = requests.get("https://explorer.strayacoin.com/api/getconnectioncount", timeout=5)
+            if response.status_code == 200:
+                return int(response.text)
+            return float('nan')
+        except:
+            return float('nan')
+
+    def _get_Money_Supply(self):
+        """Get money supply and format it as an integer with commas."""
+        try:
+            response = requests.get("https://explorer.strayacoin.com/ext/getmoneysupply", timeout=5)
+            if response.status_code == 200:
+                supply = float(response.text)  # Convert response to float first
+                return "{:,.0f}".format(supply)  # Format with commas, no decimals
+            return "N/A"
+        except:
+            return "N/A"
+
+   
+    def _get_Tradeogre_Ticker(self, field="price"):
+        """Get NAH-BTC market data from TradeOgre and return a specific field.
+        
+        Args:
+            field (str): Which field to return (e.g., "price", "bid", "ask", "high", "low").
+                        Defaults to "price".
+    
+        Returns:
+            str: Formatted value (e.g., "0.00000003 BTC") or "N/A" if error.
+        """
+        try:
+            response = requests.get("https://tradeogre.com/api/v1/ticker/NAH-BTC", timeout=5)
+            if response.status_code == 200:
+                data = response.json()
+                value = float(data.get(field, 0))  # Get the field (default 0 if missing)
+                return f"{value:.8f} BTC"  # Format to 8 decimal places
+            return "N/A"
+        except:
+            return "N/A"
+
+    def _OLD_get_peer_count(self):
         """Get number of network peers"""
         try:
             result = subprocess.run(
@@ -584,7 +657,7 @@ Type "help" for available commands.
             self.print_output("Stopping mining...\n", "warning")
         else:
             self.print_output("No active mining operation\n", "output")
-
+            
     def handle_theme_command(self, cmd_parts):
         """Handle theme changing commands"""
         if len(cmd_parts) == 1:
