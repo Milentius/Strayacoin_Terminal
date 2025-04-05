@@ -485,6 +485,7 @@ Type "help" for available commands.
                     #previous_rms = rms
                     #previous_emc_ratio = emc_ratio
                     
+                    #connectedPeers = self._get_connected_peer_count()
                     moneySupply = self._get_Money_Supply()
                     priceOnTradeOgre = self._get_Tradeogre_Ticker(field="price")
                     bidOnTradeOgre = self._get_Tradeogre_Ticker(field="bid")
@@ -494,10 +495,11 @@ Type "help" for available commands.
                         f"Mined Block {minedBlocks}\n"
                         f"├─ RMS: {rms_str}\n"
                         f"├─ EMC: {emc_str}\n"
-                        f"├─ Peers: {stats['peers']}\n"
-                        f"├─ Difficulty: {stats['difficulty']:.6f}\n"
-                        f"├─ Network Hashrate: {stats['hashrate']/1000:,.2f} KH/s\n"
+                        f"├─ Connected Peers: {stats['conpeers']}\n"
                         f"├────────────────────────────────────────\n"
+                        f"├─ Network Difficulty: {stats['difficulty']:.6f}\n"
+                        f"├─ Network Peers: {stats['netpeers']}\n"
+                        f"├─ Network Hashrate: {stats['hashrate']/1000:,.2f} KH/s\n"
                         f"├─ Network Money Supply: {moneySupply}\n"
                         f"├────────────────────────────────────────\n"
                         f"├─ BTC Price (TradeOgre): {priceOnTradeOgre}\n"
@@ -532,7 +534,8 @@ Type "help" for available commands.
         """Get all network statistics in one optimized call"""
         stats = {
             'difficulty': float('nan'),
-            'peers': float('nan'),
+            'netpeers': float('nan'),
+            'conpeers': float('nan'),
             'hashrate': float('nan'),
             'rms': float('nan'),
             'emc': float('nan')
@@ -541,17 +544,18 @@ Type "help" for available commands.
         try:
             # Get difficulty and peers first since we need them for hashrate fallback
             stats['difficulty'] = self._get_network_difficulty()
-            stats['peers'] = self._get_peer_count()
+            stats['netpeers'] = self._get_network_peer_count()
+            stats['conpeers'] = self._get_connected_peer_count()
 
             # Get hashrate with optimized fallback
             stats['hashrate'] = self._get_network_hashrate(stats['difficulty'])
 
             # Calculate metrics
-            if not math.isnan(stats['difficulty']) and not math.isnan(stats['peers']):
-                if stats['peers'] > 0 and stats['difficulty'] > 0:
-                    stats['rms'] = 1 / (stats['difficulty'] * stats['peers'])
+            if not math.isnan(stats['difficulty']) and not math.isnan(stats['netpeers']):
+                if stats['netpeers'] > 0 and stats['difficulty'] > 0:
+                    stats['rms'] = 1 / (stats['difficulty'] * stats['conpeers'])
                     if not math.isnan(stats['hashrate']):
-                        stats['emc'] = stats['hashrate'] / (stats['difficulty'] * stats['peers'])
+                        stats['emc'] = stats['hashrate'] / (stats['difficulty'] * stats['netpeers'])
 
         except Exception as e:
             self.print_output(f"Network stats error: {str(e)}\n", "error")
@@ -593,7 +597,7 @@ Type "help" for available commands.
                 return current_difficulty * (2**32) / 60
             return float('nan')
 
-    def _get_peer_count(self):
+    def _get_network_peer_count(self):
         """Get number of network peers from explorer API"""
         try:
             response = requests.get("https://explorer.strayacoin.com/api/getconnectioncount", timeout=5)
@@ -635,8 +639,8 @@ Type "help" for available commands.
         except:
             return "N/A"
 
-    def _OLD_get_peer_count(self):
-        """Get number of network peers"""
+    def _get_connected_peer_count(self):
+        """Get number of connected peers"""
         try:
             result = subprocess.run(
                 [self.cli_path, "getpeerinfo"],
