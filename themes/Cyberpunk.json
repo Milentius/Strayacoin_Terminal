@@ -1,0 +1,13 @@
+{
+    "name": "Cyberpunk",
+    "colors": {
+        "background": "#0F0F23",
+        "foreground": "#F8F8F2",
+        "prompt": "#FF00FF",
+        "output": "#00FFFF",
+        "error": "#FF5555",
+        "warning": "#FFCC00",
+        "success": "#00FFAA",
+        "statusbar": "#1A1A2E"
+    }
+}

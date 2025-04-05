@@ -1,0 +1,13 @@
+{
+    "name": "Solarized Dark",
+    "colors": {
+        "background": "#002b36",
+        "foreground": "#839496",
+        "prompt": "#2aa198",
+        "output": "#93a1a1",
+        "error": "#dc322f",
+        "warning": "#b58900",
+        "success": "#859900",
+        "statusbar": "#073642"
+    }
+}

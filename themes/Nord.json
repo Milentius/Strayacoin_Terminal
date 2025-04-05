@@ -1,0 +1,13 @@
+{
+    "name": "Nord",
+    "colors": {
+        "background": "#2E3440",
+        "foreground": "#D8DEE9",
+        "prompt": "#A3BE8C",
+        "output": "#E5E9F0",
+        "error": "#BF616A",
+        "warning": "#EBCB8B",
+        "success": "#8FBCBB",
+        "statusbar": "#3B4252"
+    }
+}

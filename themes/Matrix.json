@@ -1,0 +1,13 @@
+{
+    "name": "Matrix",
+    "colors": {
+        "background": "#000000",
+        "foreground": "#00FF00",
+        "prompt": "#00FF00",
+        "output": "#00AA00",
+        "error": "#FF0000",
+        "warning": "#FFFF00",
+        "success": "#00FF00",
+        "statusbar": "#001100"
+    }
+}

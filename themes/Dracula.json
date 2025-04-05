@@ -1,0 +1,13 @@
+{
+    "name": "Dracula",
+    "colors": {
+        "background": "#282A36",
+        "foreground": "#F8F8F2",
+        "prompt": "#50FA7B",
+        "output": "#F1FA8C",
+        "error": "#FF5555",
+        "warning": "#F1FA8C",
+        "success": "#50FA7B",
+        "statusbar": "#44475A"
+    }
+}
