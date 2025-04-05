@@ -496,7 +496,7 @@ Type "help" for available commands.
                         f"├─ EMC: {emc_str}\n"
                         f"├─ Peers: {stats['peers']}\n"
                         f"├─ Difficulty: {stats['difficulty']:.6f}\n"
-                        f"├─ Net Hashrate: {stats['hashrate']/1000:,.2f} KH/s\n"
+                        f"├─ Network Hashrate: {stats['hashrate']/1000:,.2f} KH/s\n"
                         f"├────────────────────────────────────────\n"
                         f"├─ Network Money Supply: {moneySupply}\n"
                         f"├────────────────────────────────────────\n"
